@@ -1,10 +1,22 @@
-from tgcn_bohb import TGCNModel
-import pickle
 import os
+import GPUtil
+import pickle
 import numpy as np
 import pandas as pd
-import keras_tuner as kt
+import ray
+from tgcn import TGCNModel
+from ray import tune
+from ray.tune.schedulers import HyperBandForBOHB
+from ray.tune.search.bohb import TuneBOHB
 from sklearn.model_selection import TimeSeriesSplit
+
+num_cpus = os.cpu_count()
+num_gpus = len(GPUtil.getGPUs())
+
+resources_per_trial = {
+    "cpu": num_cpus,
+    "gpu": num_gpus
+}
 
 with open("/data/timestep_24/trainX_timestep_24_20240108.pkl", 'rb') as file:
     trainX_loaded = pickle.load(file)
@@ -29,67 +41,87 @@ testY = np.array(testY_loaded)
 num_nodes = adj.shape[0]
 pre_len = 12
 
-def build_and_train_model(hp, x_train, y_train, x_val, y_val):
-    gru_units = hp.Int('gru_units', min_value=16, max_value=256, step=16)
-    l1 = hp.Float('l1', min_value=0.0001, max_value=0.1, sampling='log')
-    l2 = hp.Float('l2', min_value=0.0001, max_value=0.1, sampling='log')
-    epochs = hp.Int('epochs', min_value=10, max_value=300, step=5)
-    batch_size = hp.Int('batch_size', min_value=16, max_value=128, step=16)
+def chunk_data(data, chunk_size):
+    return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
+
+chunk_size = 10000  
+trainX_chunks = chunk_data(trainX, chunk_size)
+trainY_chunks = chunk_data(trainY, chunk_size)
+
+def build_and_train_model(config, x_train, y_train, x_val, y_val, checkpoint_dir=None):
+    gru_units = config["gru_units"]
+    l1 = config["l1"]
+    l2 = config["l2"]
+    epochs = config["epochs"]
+    batch_size = config["batch_size"]
 
     model = TGCNModel(num_nodes, gru_units, adj, pre_len, l1, l2)
     model.compile(optimizer='adam', loss='mse')
 
+    if checkpoint_dir:
+        model_path = os.path.join(checkpoint_dir, "model.h5")
+        model.load_weights(model_path)
+
     history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,
                         validation_data=(x_val, y_val), verbose=0)
 
+    if checkpoint_dir:
+        model.save_weights(os.path.join(checkpoint_dir, "model.h5"))
+
     return model, history.history
 
+def tune_tgcn(config, trainX_chunk_ids, trainY_chunk_ids):
+    tscv = TimeSeriesSplit(n_splits=5)
+    val_losses = []
 
-def save_history(trial_id, hp, history, filename='all_trials_history.pkl'):
-    all_data = {}
-    if os.path.exists(filename):
-        with open(filename, 'rb') as f:
-            all_data = pickle.load(f)
-    all_data[trial_id] = {
-        'hyperparameters': hp.values,
-        'history': history
+    for chunk_id in range(len(trainX_chunk_ids)):
+        trainX_chunk = ray.get(trainX_chunk_ids[chunk_id])
+        trainY_chunk = ray.get(trainY_chunk_ids[chunk_id])
+        
+        for train_indices, test_indices in tscv.split(trainX_chunk):
+            x_train, y_train = trainX_chunk[train_indices], trainY_chunk[train_indices]
+            x_val, y_val = trainX_chunk[test_indices], trainY_chunk[test_indices]
+
+            model, history = build_and_train_model(config, x_train, y_train, x_val, y_val)
+            val_losses.append(history['val_loss'][-1])
+
+    tune.report(val_loss=np.mean(val_losses))
+
+
+try:
+    ray.init(_system_config={"max_grpc_message_size": 2000000000}) 
+    trainX_chunk_ids = [ray.put(chunk) for chunk in trainX_chunks]
+    trainY_chunk_ids = [ray.put(chunk) for chunk in trainY_chunks]
+
+    config = {
+        "gru_units": tune.randint(16, 256),
+        "l1": tune.loguniform(0, 1),
+        "l2": tune.loguniform(0, 2),
+        "epochs": tune.randint(10, 300),
+        "batch_size": tune.randint(16, 128)
     }
-    with open(filename, 'wb') as f:
-        pickle.dump(all_data, f)
 
-class CVTuner(kt.engine.tuner.Tuner):
-    def run_trial(self, trial, x, y, splits):
-        hp = trial.hyperparameters
-        val_losses = []
-        full_histories = []
-        for train_indices, test_indices in splits:
-            x_train, y_train = x[train_indices], y[train_indices]
-            x_val, y_val = x[test_indices], y[test_indices]
-            model, history = build_and_train_model(hp, x_train, y_train, x_val, y_val)
-            val_losses.append(history['val_loss'])
-            full_histories.append(history)
+    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=100, reduction_factor=4)
+    bohb_search = TuneBOHB()
 
-        avg_val_loss = np.mean([h[-1] for h in val_losses])
-        self.oracle.update_trial(trial.trial_id, {'val_loss': avg_val_loss})
-        self.save_model(trial.trial_id, model)
-        save_history(trial.trial_id, hp, full_histories)
+    analysis = tune.run(
+        tune.with_parameters(tune_tgcn, trainX_chunk_ids=trainX_chunk_ids, trainY_chunk_ids=trainY_chunk_ids),
+        name="tgcn_bohb_optimization",
+        metric="val_loss",
+        mode="min",
+        config=config,
+        num_samples=10,
+        scheduler=bohb_scheduler,
+        search_alg=bohb_search,
+        resources_per_trial=resources_per_trial
+    )
 
-tscv = TimeSeriesSplit(n_splits=5)
+    best_hps = analysis.get_best_config(metric="val_loss", mode="min")
+    with open('best_hyperparameters_bohb.pkl', 'wb') as f:
+        pickle.dump(best_hps, f)
 
-tuner = CVTuner(
-    oracle=kt.oracles.Hyperband(
-        objective=kt.Objective("val_loss", direction="min"),
-        max_epochs=300,
-        hyperband_iterations=2),
-    hypermodel=build_and_train_model,
-    directory='my_dir',
-    project_name='tgcn_hyperparam_opt',
-    overwrite=True
-)
+except Exception as e:
+    print(f"An error occurred: {e}")
 
-tuner.search(trainX, trainY, splits=tscv.split(trainX))
-
-best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-
-with open('best_hyperparameters.pkl', 'wb') as f:
-    pickle.dump(best_hps.values, f)
+finally:
+    ray.shutdown()
