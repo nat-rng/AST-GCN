@@ -1,0 +1,11 @@
+# Python
+*.pyc
+__pycache__/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+traffic_raw_data/*.csv
+data/
