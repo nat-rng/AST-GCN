@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import ray
-from tgcn import TGCNModel
+from tgcn_model import TGCNModel
 from ray import tune
 from ray.tune.schedulers import HyperBandForBOHB
 from ray.tune.search.bohb import TuneBOHB
