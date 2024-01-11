@@ -18,19 +18,19 @@ resources_per_trial = {
     "gpu": num_gpus
 }
 
-with open("/data/timestep_24/trainX_timestep_24_20240108.pkl", 'rb') as file:
+with open("data/timestep_24/trainX_timestep_24_20240108.pkl", 'rb') as file:
     trainX_loaded = pickle.load(file)
 
-with open("/data/timestep_24/trainY_timestep_24_20240108.pkl", 'rb') as file:
+with open("data/timestep_24/trainY_timestep_24_20240108.pkl", 'rb') as file:
     trainY_loaded = pickle.load(file)
 
-with open("/data/timestep_24/testX_timestep_24_20240108.pkl", 'rb') as file:
+with open("data/timestep_24/testX_timestep_24_20240108.pkl", 'rb') as file:
     testX_loaded = pickle.load(file)
 
-with open("/data/timestep_24/testY_timestep_24_20240108.pkl", 'rb') as file:
+with open("data/timestep_24/testY_timestep_24_20240108.pkl", 'rb') as file:
     testY_loaded = pickle.load(file)
 
-road_adj = pd.read_excel("/data/road_connection.xlsx")
+road_adj = pd.read_excel("road_connection.xlsx")
 adj = np.mat(road_adj)
 
 trainX = np.array(trainX_loaded)
