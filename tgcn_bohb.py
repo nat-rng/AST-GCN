@@ -95,8 +95,8 @@ try:
 
     config = {
         "gru_units": tune.randint(16, 256),
-        "l1": tune.loguniform(0, 1),
-        "l2": tune.loguniform(0, 2),
+        "l1": tune.loguniform(0.0001, 1),
+        "l2": tune.loguniform(0.0001, 2),
         "epochs": tune.randint(10, 300),
         "batch_size": tune.randint(16, 128)
     }
