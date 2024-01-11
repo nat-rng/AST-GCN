@@ -13,9 +13,12 @@ from sklearn.model_selection import TimeSeriesSplit
 num_cpus = os.cpu_count()
 num_gpus = len(GPUtil.getGPUs())
 
+cpus_per_trial = os.cpu_count()/8
+gpus_per_trial = num_gpus / (128 / cpus_per_trial) if num_gpus > 0 else 0
+
 resources_per_trial = {
-    "cpu": num_cpus,
-    "gpu": num_gpus
+    "cpu": cpus_per_trial,
+    "gpu": gpus_per_trial
 }
 
 with open("data/timestep_24/trainX_timestep_24_20240108.pkl", 'rb') as file:
@@ -87,9 +90,9 @@ def tune_tgcn(config, trainX_chunk_ids, trainY_chunk_ids):
 
     tune.report(val_loss=np.mean(val_losses))
 
+ray.init(num_cpus=num_cpus, num_gpus=num_gpus) 
 
 try:
-    ray.init(_system_config={"max_grpc_message_size": 2000000000}) 
     trainX_chunk_ids = [ray.put(chunk) for chunk in trainX_chunks]
     trainY_chunk_ids = [ray.put(chunk) for chunk in trainY_chunks]
 
