@@ -126,7 +126,7 @@ try:
     )
 
     best_hps = analysis.get_best_config(metric="val_loss", mode="min")
-    with open('best_hyperparameters_bohb.pkl', 'wb') as f:
+    with open('best_hyperparameters_bohb_gpu.pkl', 'wb') as f:
         pickle.dump(best_hps, f)
 
 except Exception as e:
