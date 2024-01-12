@@ -55,7 +55,7 @@ pre_len = 12
 def chunk_data(data, chunk_size):
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
-chunk_size = 10000  
+chunk_size = 5000  
 trainX_chunks = chunk_data(trainX, chunk_size)
 trainY_chunks = chunk_data(trainY, chunk_size)
 
@@ -112,7 +112,7 @@ try:
         "batch_size": tune.randint(8, 96)
     }
 
-    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=100, reduction_factor=4)
+    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=50, reduction_factor=4)
     bohb_search = TuneBOHB()
 
     analysis = tune.run(
@@ -121,7 +121,7 @@ try:
         metric="val_loss",
         mode="min",
         config=config,
-        num_samples=10,
+        num_samples=5,
         scheduler=bohb_scheduler,
         search_alg=bohb_search,
         resources_per_trial=resources_per_trial
