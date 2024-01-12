@@ -6,7 +6,6 @@ import pandas as pd
 import ray
 from tgcn_model import TGCNModel
 import tensorflow as tf
-from tensorflow.keras.mixed_precision import experimental as mixed_precision
 from ray import tune
 from ray.tune.schedulers import HyperBandForBOHB
 from ray.tune.search.bohb import TuneBOHB
@@ -29,9 +28,6 @@ if gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
     except RuntimeError as e:
         print(e)
-
-policy = mixed_precision.Policy('mixed_float16')
-mixed_precision.set_policy(policy)
 
 with open("data/timestep_24/trainX_timestep_24_20240108.pkl", 'rb') as file:
     trainX_loaded = pickle.load(file)
