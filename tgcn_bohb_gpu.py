@@ -14,11 +14,9 @@ from sklearn.model_selection import TimeSeriesSplit
 num_cpus = os.cpu_count()
 num_gpus = len(GPUtil.getGPUs())
 
-cpus_per_trial = num_cpus/4
-
 resources_per_trial = {
-    "cpu": cpus_per_trial,
-    "gpu": num_gpus
+    "cpu": num_cpus/2,
+    "gpu": num_gpus/2
 }
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -105,14 +103,14 @@ try:
     trainY_chunk_ids = [ray.put(chunk) for chunk in trainY_chunks]
 
     config = {
-        "gru_units": tune.randint(8, 128),
+        "gru_units": tune.randint(8, 256),
         "l1": tune.loguniform(0.0001, 1),
         "l2": tune.loguniform(0.0001, 2),
         "epochs": tune.randint(10, 300),
-        "batch_size": tune.randint(8, 96)
+        "batch_size": tune.randint(8, 128)
     }
 
-    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=50, reduction_factor=4)
+    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=100, reduction_factor=4)
     bohb_search = TuneBOHB()
 
     analysis = tune.run(
@@ -121,7 +119,7 @@ try:
         metric="val_loss",
         mode="min",
         config=config,
-        num_samples=5,
+        num_samples=10,
         scheduler=bohb_scheduler,
         search_alg=bohb_search,
         resources_per_trial=resources_per_trial
