@@ -13,12 +13,9 @@ from sklearn.model_selection import TimeSeriesSplit
 num_cpus = os.cpu_count()
 num_gpus = len(GPUtil.getGPUs())
 
-cpus_per_trial = os.cpu_count()/8
-gpus_per_trial = num_gpus / (128 / cpus_per_trial) if num_gpus > 0 else 0
-
 resources_per_trial = {
-    "cpu": cpus_per_trial,
-    "gpu": gpus_per_trial
+    "cpu": num_cpus,
+    "gpu": num_gpus
 }
 
 with open("data/timestep_24/trainX_timestep_24_20240108.pkl", 'rb') as file:
@@ -98,13 +95,13 @@ try:
 
     config = {
         "gru_units": tune.randint(16, 256),
-        "l1": tune.loguniform(0.0001, 1),
-        "l2": tune.loguniform(0.0001, 2),
-        "epochs": tune.randint(10, 300),
+        "l1": tune.loguniform(0.01, 1),
+        "l2": tune.loguniform(0.01, 1),
+        "epochs": tune.randint(10, 100),
         "batch_size": tune.randint(16, 128)
     }
 
-    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=100, reduction_factor=4)
+    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=75, reduction_factor=4)
     bohb_search = TuneBOHB()
 
     analysis = tune.run(
