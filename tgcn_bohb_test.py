@@ -49,6 +49,10 @@ testY = np.array(testY_loaded)
 
 num_nodes = adj.shape[0]
 pre_len = 12
+gru_units = 16
+l1 = 0.5
+l2 = 0.5
+batch_size = 32
 
 def chunk_data(data, chunk_size):
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
@@ -58,11 +62,11 @@ trainX_chunks = chunk_data(trainX, chunk_size)
 trainY_chunks = chunk_data(trainY, chunk_size)
 
 def build_and_train_model(config, x_train, y_train, x_val, y_val, checkpoint_dir=None):
-    gru_units = config["gru_units"]
-    l1 = config["l1"]
-    l2 = config["l2"]
+    # gru_units = config["gru_units"]
+    # l1 = config["l1"]
+    # l2 = config["l2"]
     epochs = config["epochs"]
-    batch_size = config["batch_size"]
+    # batch_size = config["batch_size"]
 
     model = TGCNModel(num_nodes, gru_units, adj, pre_len, l1, l2)
     model.compile(optimizer='adam', loss='mse')
@@ -103,11 +107,7 @@ try:
     trainY_chunk_ids = [ray.put(chunk) for chunk in trainY_chunks]
 
     config = {
-        "gru_units": tune.randint(16, 32),
-        "l1": tune.uniform(0.5, 0.7),
-        "l2": tune.uniform(0.5, 0.7),
         "epochs": tune.randint(1, 10),
-        "batch_size": tune.choice([16, 32, 64, 128])
     }
 
     bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=50, reduction_factor=4)
