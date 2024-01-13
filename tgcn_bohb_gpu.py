@@ -15,8 +15,8 @@ num_cpus = os.cpu_count()
 num_gpus = len(GPUtil.getGPUs())
 
 resources_per_trial = {
-    "cpu": num_cpus/2,
-    "gpu": num_gpus/2
+    "cpu": 2,
+    "gpu": 0.5 if num_gpus > 0 else 0
 }
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -53,7 +53,7 @@ pre_len = 12
 def chunk_data(data, chunk_size):
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
-chunk_size = 5000  
+chunk_size = 1000  
 trainX_chunks = chunk_data(trainX, chunk_size)
 trainY_chunks = chunk_data(trainY, chunk_size)
 
@@ -103,14 +103,14 @@ try:
     trainY_chunk_ids = [ray.put(chunk) for chunk in trainY_chunks]
 
     config = {
-        "gru_units": tune.randint(8, 256),
-        "l1": tune.loguniform(0.0001, 1),
-        "l2": tune.loguniform(0.0001, 2),
-        "epochs": tune.randint(10, 300),
-        "batch_size": tune.randint(8, 128)
+        "gru_units": tune.randint(16, 256),
+        "l1": tune.loguniform(0.001, 1),
+        "l2": tune.loguniform(0.001, 1),
+        "epochs": tune.randint(10, 100),
+        "batch_size": tune.randint(16, 128)
     }
 
-    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=100, reduction_factor=4)
+    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=50, reduction_factor=4)
     bohb_search = TuneBOHB()
 
     analysis = tune.run(

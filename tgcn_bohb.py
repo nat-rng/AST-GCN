@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import ray
 from tgcn_model import TGCNModel
+import tensorflow as tf
 from ray import tune
 from ray.tune.schedulers import HyperBandForBOHB
 from ray.tune.search.bohb import TuneBOHB
@@ -14,9 +15,17 @@ num_cpus = os.cpu_count()
 num_gpus = len(GPUtil.getGPUs())
 
 resources_per_trial = {
-    "cpu": num_cpus,
-    "gpu": num_gpus
+    "cpu": 2,
+    "gpu": 0.5 if num_gpus > 0 else 0
 }
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 
 with open("data/timestep_24/trainX_timestep_24_20240108.pkl", 'rb') as file:
     trainX_loaded = pickle.load(file)
@@ -44,7 +53,7 @@ pre_len = 12
 def chunk_data(data, chunk_size):
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
-chunk_size = 10000  
+chunk_size = 1000  
 trainX_chunks = chunk_data(trainX, chunk_size)
 trainY_chunks = chunk_data(trainY, chunk_size)
 
@@ -95,8 +104,8 @@ try:
 
     config = {
         "gru_units": tune.randint(16, 256),
-        "l1": tune.loguniform(0.01, 1),
-        "l2": tune.loguniform(0.01, 1),
+        "l1": tune.loguniform(0.001, 1),
+        "l2": tune.loguniform(0.001, 1),
         "epochs": tune.randint(10, 100),
         "batch_size": tune.randint(16, 128)
     }
