@@ -80,7 +80,7 @@ def build_and_train_model(config, x_train, y_train, x_val, y_val, checkpoint_dir
     return model, history.history
 
 def tune_tgcn(config, trainX_chunk_ids, trainY_chunk_ids):
-    tscv = TimeSeriesSplit(n_splits=5)
+    tscv = TimeSeriesSplit(n_splits=3)
     val_losses = []
 
     for chunk_id in range(len(trainX_chunk_ids)):
@@ -96,7 +96,7 @@ def tune_tgcn(config, trainX_chunk_ids, trainY_chunk_ids):
 
     tune.report(val_loss=np.mean(val_losses))
 
-ray.init(num_cpus=num_cpus, num_gpus=num_gpus) 
+ray.init() 
 
 try:
     trainX_chunk_ids = [ray.put(chunk) for chunk in trainX_chunks]
@@ -107,10 +107,10 @@ try:
         "l1": tune.loguniform(0.001, 1),
         "l2": tune.loguniform(0.001, 1),
         "epochs": tune.randint(10, 100),
-        "batch_size": tune.randint(16, 128)
+        "batch_size": tune.choice([16, 32, 64, 128])
     }
 
-    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=75, reduction_factor=4)
+    bohb_scheduler = HyperBandForBOHB(time_attr="training_iteration", max_t=50, reduction_factor=4)
     bohb_search = TuneBOHB()
 
     analysis = tune.run(
