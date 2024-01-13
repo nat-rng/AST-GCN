@@ -84,7 +84,7 @@ def build_and_train_model(config, x_train, y_train, x_val, y_val, checkpoint_dir
     return model, history.history
 
 def tune_tgcn(config, trainX_chunk_ids, trainY_chunk_ids):
-    tscv = TimeSeriesSplit(n_splits=3)
+    tscv = TimeSeriesSplit(n_splits=1)
     val_losses = []
 
     for chunk_id in range(len(trainX_chunk_ids)):
