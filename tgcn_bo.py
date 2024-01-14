@@ -29,6 +29,13 @@ trainY = np.array(trainY_loaded)
 num_nodes = adj.shape[0]
 pre_len = 12
 
+def print_best_trial(study, trial):
+    best_trial = study.best_trial
+    print(f"Finished trial {trial.number} with value: {trial.value}")
+    print(f"Best trial so far: {best_trial.number}")
+    print(f"Best value so far: {best_trial.value}")
+    print(f"Best parameters so far: {best_trial.params}")
+
 def objective(trial):
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
@@ -52,10 +59,13 @@ def objective(trial):
     return np.mean(val_losses)
 
 study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=50)
+study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial])
 
 best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)
 
 with open('best_hyperparameters_optuna.pkl', 'wb') as f:
     pickle.dump(best_hyperparameters, f)
+
+with open('study_optuna.pkl', 'wb') as f:
+    pickle.dump(study, f)
