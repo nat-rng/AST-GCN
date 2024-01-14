@@ -1,12 +1,10 @@
+import optuna
 import pickle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tgcn_model import TGCNModel
 from sklearn.model_selection import TimeSeriesSplit
-from skopt import gp_minimize
-from skopt.space import Real, Integer, Categorical
-from skopt.utils import use_named_args
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -31,18 +29,14 @@ trainY = np.array(trainY_loaded)
 num_nodes = adj.shape[0]
 pre_len = 12
 
-space = [
-    Integer(16, 256, name="gru_units"),
-    Real(0.001, 1, "log-uniform", name="l1"),
-    Real(0.001, 1, "log-uniform", name="l2"),
-    Integer(10, 100, name="epochs"),
-    Categorical([16, 32, 64, 128], name="batch_size")
-]
+def objective(trial):
+    gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
+    l1 = trial.suggest_loguniform('l1', 0.001, 1)
+    l2 = trial.suggest_loguniform('l2', 0.001, 1)
+    epochs = trial.suggest_int('epochs', 10, 100)
+    batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
 
-@use_named_args(space)
-def optimize_tgcn(gru_units, l1, l2, epochs, batch_size):
     val_losses = []
-
     tscv = TimeSeriesSplit(n_splits=3)
     for train_indices, test_indices in tscv.split(trainX):
         x_train, y_train = trainX[train_indices], trainY[train_indices]
@@ -57,9 +51,11 @@ def optimize_tgcn(gru_units, l1, l2, epochs, batch_size):
 
     return np.mean(val_losses)
 
-res = gp_minimize(optimize_tgcn, space, n_calls=50, random_state=42)
-best_hyperparameters = {dim.name: res.x[i] for i, dim in enumerate(space)}
+study = optuna.create_study(direction='minimize')
+study.optimize(objective, n_trials=50)
+
+best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)
 
-with open('best_hyperparameters_bayesian_opt.pkl', 'wb') as f:
+with open('best_hyperparameters_optuna.pkl', 'wb') as f:
     pickle.dump(best_hyperparameters, f)
