@@ -5,6 +5,11 @@ import pandas as pd
 import tensorflow as tf
 from tgcn_model import TGCNModel
 from sklearn.model_selection import TimeSeriesSplit
+import logging
+import sys
+
+optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
+optuna.logging.set_verbosity(optuna.logging.INFO)
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
