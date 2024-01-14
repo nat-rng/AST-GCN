@@ -55,7 +55,7 @@ def objective(trial):
         model = TGCNModel(num_nodes, gru_units, adj, pre_len, l1, l2)
         model.compile(optimizer='adam', loss='mse')
         history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,
-                            validation_data=(x_val, y_val), verbose=0)
+                            validation_data=(x_val, y_val), verbose=2)
 
         val_losses.append(history.history['val_loss'][-1])
     print(f"Completed trial {trial.number}")
@@ -63,7 +63,7 @@ def objective(trial):
 
 pruner = MedianPruner()
 study = optuna.create_study(direction='minimize', pruner=pruner)
-study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=-1)
+study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=1)
 
 best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)
