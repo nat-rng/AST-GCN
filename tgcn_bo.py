@@ -39,7 +39,6 @@ def print_best_trial(study, trial):
     print(f"Best parameters so far: {best_trial.params}")
 
 def objective(trial):
-    print(f"Starting trial {trial.number}")
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
@@ -58,12 +57,11 @@ def objective(trial):
                             validation_data=(x_val, y_val), verbose=2)
 
         val_losses.append(history.history['val_loss'][-1])
-    print(f"Completed trial {trial.number}")
     return np.mean(val_losses)
 
 pruner = MedianPruner()
 study = optuna.create_study(direction='minimize', pruner=pruner)
-study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=1)
+study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=-1)
 
 best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)
