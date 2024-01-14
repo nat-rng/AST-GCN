@@ -5,6 +5,7 @@ import pandas as pd
 import tensorflow as tf
 from tgcn_model import TGCNModel
 from sklearn.model_selection import TimeSeriesSplit
+from optuna.pruners import MedianPruner
 import logging
 import sys
 
@@ -63,8 +64,9 @@ def objective(trial):
 
     return np.mean(val_losses)
 
-study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial])
+pruner = MedianPruner()
+study = optuna.create_study(direction='minimize', pruner=pruner)
+study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=-1)
 
 best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)
