@@ -6,11 +6,6 @@ import tensorflow as tf
 from tgcn_model import TGCNModel
 from sklearn.model_selection import TimeSeriesSplit
 from optuna.pruners import MedianPruner
-import logging
-import sys
-
-optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-optuna.logging.set_verbosity(optuna.logging.INFO)
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -38,11 +33,13 @@ pre_len = 12
 def print_best_trial(study, trial):
     best_trial = study.best_trial
     print(f"Finished trial {trial.number} with value: {trial.value}")
+    print(f"Number of finished trials: {len(study.trials)}")
     print(f"Best trial so far: {best_trial.number}")
     print(f"Best value so far: {best_trial.value}")
     print(f"Best parameters so far: {best_trial.params}")
 
 def objective(trial):
+    print(f"Starting trial {trial.number}")
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
@@ -61,7 +58,7 @@ def objective(trial):
                             validation_data=(x_val, y_val), verbose=0)
 
         val_losses.append(history.history['val_loss'][-1])
-
+    print(f"Completed trial {trial.number}")
     return np.mean(val_losses)
 
 pruner = MedianPruner()
