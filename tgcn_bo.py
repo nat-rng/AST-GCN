@@ -31,8 +31,8 @@ pre_len = 12
 
 def objective(trial):
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
-    l1 = trial.suggest_loguniform('l1', 0.001, 1)
-    l2 = trial.suggest_loguniform('l2', 0.001, 1)
+    l1 = trial.suggest_float('l1', 0.001, 1, log=True)
+    l2 = trial.suggest_float('l2', 0.001, 1, log=True)
     epochs = trial.suggest_int('epochs', 10, 100)
     batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
 
