@@ -122,7 +122,6 @@ def objective(trial):
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
     epochs = trial.suggest_int('epochs', min_epochs, max_epochs)
-    epochs = 30
     batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
 
     hyperparameters = trial.params
