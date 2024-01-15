@@ -54,16 +54,17 @@ def get_loss_function(model):
     return loss_function
 
 class HyperparametersLogger(Callback):
-    def __init__(self, hyperparameters):
+    def __init__(self, hyperparameters, trial_number):
         super().__init__()
         self.hyperparameters = hyperparameters
+        self.trial_number = trial_number
 
-    def on_train_begin(self, logs=None):
-        print("Training started with the following hyperparameters:")
-        print(str(self.hyperparameters))
+    def on_epoch_end(self, logs=None):
+        print("Trial number:", self.trial_number)
+        print("Training started with the following hyperparameters:", str(self.hyperparameters))
 
 def objective(trial):
-    print("Start trial: ", trial.number)
+    trial_number = trial.number
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
@@ -82,7 +83,7 @@ def objective(trial):
         loss = get_loss_function(model)
         model.compile(optimizer='adam', loss=loss, metrics=['mae','mse','mape', r_squared])
         history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,
-                            validation_data=(x_val, y_val), verbose=2, callbacks=[HyperparametersLogger(hyperparameters)])
+                            validation_data=(x_val, y_val), verbose=2, callbacks=[HyperparametersLogger(hyperparameters, trial_number)])
 
         val_losses.append(history.history['val_loss'][-1])
     return np.mean(val_losses)
