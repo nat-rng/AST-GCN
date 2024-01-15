@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from keras import backend as K
+from keras.callbacks import Callback
 from tgcn_model import TGCNModel
 from sklearn.model_selection import TimeSeriesSplit
 from optuna.pruners import MedianPruner
@@ -56,6 +57,15 @@ def get_loss_function(model):
         return total_loss
     return loss_function
 
+class HyperparametersLogger(Callback):
+    def __init__(self, hyperparameters):
+        super().__init__()
+        self.hyperparameters = hyperparameters
+
+    def on_train_begin(self, logs=None):
+        print("Training started with the following hyperparameters:")
+        print(str(self.hyperparameters))
+
 def objective(trial):
     print("Start trial: ", trial.number)
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
@@ -65,7 +75,7 @@ def objective(trial):
     epochs = 30
     batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
 
-    print("Parameters: ", trial.params)
+    hyperparameters = trial.params
     val_losses = []
     tscv = TimeSeriesSplit(n_splits=3)
     for train_indices, test_indices in tscv.split(trainX):
@@ -76,7 +86,7 @@ def objective(trial):
         loss = get_loss_function(model)
         model.compile(optimizer='adam', loss=loss, metrics=['mae','mse','mape', r_squared])
         history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,
-                            validation_data=(x_val, y_val), verbose=2)
+                            validation_data=(x_val, y_val), verbose=2, callbacks=[HyperparametersLogger(hyperparameters)])
 
         val_losses.append(history.history['val_loss'][-1])
     return np.mean(val_losses)
