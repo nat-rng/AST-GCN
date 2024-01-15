@@ -1,3 +1,4 @@
+import os
 import optuna
 import pickle
 import numpy as np
@@ -69,6 +70,9 @@ class HyperparametersLogger(Callback):
 
 def objective(trial):
     trial_number = trial.number
+    num_gpus = 2
+    gpu_id = trial.number % num_gpus
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
