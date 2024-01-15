@@ -58,13 +58,14 @@ def get_loss_function(model):
 
 def objective(trial):
     print("Start trial: ", trial.number)
-    print("Parameters: ", trial.params)
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
-    epochs = trial.suggest_categorical('epochs', [10, 15, 20, 30, 40, 50])
+    # epochs = trial.suggest_categorical('epochs', [10, 15, 20, 30, 40, 50])
+    epochs = 30
     batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
 
+    print("Parameters: ", trial.params)
     val_losses = []
     tscv = TimeSeriesSplit(n_splits=3)
     for train_indices, test_indices in tscv.split(trainX):
