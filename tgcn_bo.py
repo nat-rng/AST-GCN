@@ -95,7 +95,8 @@ def objective(trial):
         loss = get_loss_function(model)
         model.compile(optimizer='adam', loss=loss, metrics=['mae','mse','mape', r_squared])
         history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,
-                            validation_data=(x_val, y_val), verbose=2, callbacks=[HyperparametersLogger(hyperparameters, trial_number)])
+                            validation_data=(x_val, y_val), verbose=2, 
+                            callbacks=[HyperparametersLogger(hyperparameters, trial_number)])
 
         val_losses.append(history.history['val_loss'][-1])
     return np.mean(val_losses)
