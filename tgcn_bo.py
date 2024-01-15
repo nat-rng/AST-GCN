@@ -68,11 +68,9 @@ class HyperparametersLogger(Callback):
         print(f"Trial number: {self.trial_number}, "
               f"Training started with the following hyperparameters: {self.hyperparameters}")
 
-    def on_epoch_end(self, logs=None):
-        print(f"Trial number: {self.trial_number}, "
+    def on_epoch_end(self, epoch, logs=None):
+        print(f"Trial number: {self.trial_number}, Epoch: {epoch}, "
               f"Hyperparameters used in epoch: {self.hyperparameters}")
-
-
 
 def objective(trial):
     trial_number = trial.number
