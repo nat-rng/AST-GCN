@@ -9,7 +9,7 @@ from keras import backend as K
 from keras.callbacks import Callback
 from tgcn_model import TGCNModel
 from sklearn.model_selection import TimeSeriesSplit
-from optuna.pruners import BasePruner, HyperbandPruner, TimeoutPruner
+from optuna.pruners import HyperbandPruner
 
 class HyperparametersLogger(Callback):
     def __init__(self, hyperparameters, trial_number):
@@ -40,18 +40,6 @@ class OptunaPruningCallback(Callback):
             print(f"Trial {self.trial.number} pruned at epoch {epoch}. "
                   f"With hyperparameters: {self.trial.params}")
             self.model.stop_training = True
-
-class HyperbandTimeoutPruner(BasePruner):
-    def __init__(self, min_resource, max_resource, reduction_factor, timeout_seconds):
-        self.timeout_pruner = TimeoutPruner(timeout_seconds)
-        self.hyperband_pruner = HyperbandPruner(min_resource, max_resource, reduction_factor)
-
-    def prune(self, study, trial):
-        if self.timeout_pruner.prune(study, trial):
-            return True
-        if self.hyperband_pruner.prune(study, trial):
-            return True
-        return False
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -143,9 +131,9 @@ def objective(trial):
         val_losses.append(history.history['val_loss'][-1])
     return np.mean(val_losses)
 
-pruner = HyperbandTimeoutPruner(min_resource=min_epochs, max_resource=max_epochs, reduction_factor=4, timeout_seconds=timeout)
+pruner = HyperbandPruner(min_resource=min_epochs, max_resource=max_epochs, reduction_factor=4)
 study = optuna.create_study(direction='minimize', pruner=pruner)
-study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=n_jobs)
+study.optimize(objective, n_trials=50, timeout=timeout, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=n_jobs)
 
 best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)
