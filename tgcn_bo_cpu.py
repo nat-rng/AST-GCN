@@ -67,6 +67,8 @@ class HyperparametersLogger(Callback):
         print(f"Trial number: {self.trial_number}, Epoch: {epoch}, "
               f"Hyperparameters used in epoch: {self.hyperparameters}")
 
+timeout = 172200
+
 def objective(trial):
     trial_number = trial.number
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
@@ -94,7 +96,7 @@ def objective(trial):
 
 pruner = MedianPruner()
 study = optuna.create_study(direction='minimize', pruner=pruner)
-study.optimize(objective, n_trials=50, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=15)
+study.optimize(objective, n_trials=50, timeout=timeout, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=15)
 
 best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)

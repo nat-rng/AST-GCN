@@ -27,6 +27,7 @@ class HyperparametersLogger(Callback):
         
 class OptunaPruningCallback(Callback):
     def __init__(self, trial, monitor):
+        super().__init__()
         self.trial = trial
         self.monitor = monitor
 
