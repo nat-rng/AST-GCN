@@ -30,11 +30,11 @@ pre_len = 12
 
 def print_best_trial(study, trial):
     best_trial = study.best_trial
-    print(f"Finished trial {trial.number} with value: {trial.value}")
-    print(f"Number of finished trials: {len(study.trials)}")
-    print(f"Best trial so far: {best_trial.number}")
-    print(f"Best value so far: {best_trial.value}")
-    print(f"Best parameters so far: {best_trial.params}")
+    print(f"Finished trial {trial.number} with value: {trial.value}", flush=True)
+    print(f"Number of finished trials: {len(study.trials)}", flush=True)
+    print(f"Best trial so far: {best_trial.number}", flush=True)
+    print(f"Best value so far: {best_trial.value}", flush=True)
+    print(f"Best parameters so far: {best_trial.params}", flush=True)
 
 def r_squared(y_true, y_pred):
     ss_res =  K.sum(K.square(y_true - y_pred)) 
@@ -60,8 +60,8 @@ class HyperparametersLogger(Callback):
         self.trial_number = trial_number
 
     def on_epoch_end(self, logs=None):
-        print("Trial number:", self.trial_number)
-        print("Training started with the following hyperparameters:", str(self.hyperparameters))
+        print("Trial number:", self.trial_number, flush=True)
+        print("Training started with the following hyperparameters:", str(self.hyperparameters), flush=True)
 
 def objective(trial):
     trial_number = trial.number
