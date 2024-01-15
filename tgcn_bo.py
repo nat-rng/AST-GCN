@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from keras import backend as K
 from tgcn_model import TGCNModel
 from sklearn.model_selection import TimeSeriesSplit
 from optuna.pruners import MedianPruner
@@ -38,11 +39,30 @@ def print_best_trial(study, trial):
     print(f"Best value so far: {best_trial.value}")
     print(f"Best parameters so far: {best_trial.params}")
 
+def r_squared(y_true, y_pred):
+    ss_res =  K.sum(K.square(y_true - y_pred)) 
+    ss_tot = K.sum(K.square(y_true - K.mean(y_true))) 
+    return (1 - ss_res/(ss_tot + K.epsilon()))
+
+lambda_loss = 0.0015
+
+def get_loss_function(model):
+    def loss_function(y_true, y_pred):
+        y_true = tf.reshape(y_true, [-1, num_nodes])
+        y_pred = tf.reshape(y_pred, [-1, num_nodes])
+        mse_term = tf.reduce_mean(tf.math.squared_difference(y_pred, y_true))
+        l2_reg_term = tf.add_n([tf.nn.l2_loss(v) for v in model.trainable_variables if 'kernel' in v.name])
+        total_loss = mse_term + lambda_loss * l2_reg_term
+        return total_loss
+    return loss_function
+
 def objective(trial):
+    print("Start trial: ", trial.number)
+    print("Parameters: ", trial.params)
     gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
-    epochs = trial.suggest_int('epochs', 10, 100)
+    epochs = trial.suggest_categorical('epochs', [10, 15, 20, 30, 40, 50])
     batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
 
     val_losses = []
@@ -52,7 +72,8 @@ def objective(trial):
         x_val, y_val = trainX[test_indices], trainY[test_indices]
 
         model = TGCNModel(num_nodes, gru_units, adj, pre_len, l1, l2)
-        model.compile(optimizer='adam', loss='mse')
+        loss = get_loss_function(model)
+        model.compile(optimizer='adam', loss=loss, metrics=['mae','mse','mape', r_squared])
         history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size,
                             validation_data=(x_val, y_val), verbose=2)
 
