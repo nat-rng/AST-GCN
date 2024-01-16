@@ -71,12 +71,13 @@ timeout = 172200
 
 def objective(trial):
     trial_number = trial.number
-    gru_units = trial.suggest_categorical('gru_units', [16, 32, 64, 128])
+    gru_units = trial.suggest_categorical('gru_units', [16, 32, 64])
     l1 = trial.suggest_float('l1', 0.001, 1, log=True)
     l2 = trial.suggest_float('l2', 0.001, 1, log=True)
     # epochs = trial.suggest_categorical('epochs', [10, 15, 20, 30, 40, 50])
     epochs = 30
-    batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
+    # batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
+    batch_size = 128
 
     hyperparameters = trial.params
     val_losses = []
@@ -96,7 +97,7 @@ def objective(trial):
 
 pruner = MedianPruner()
 study = optuna.create_study(direction='minimize', pruner=pruner)
-study.optimize(objective, n_trials=50, timeout=timeout, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=15)
+study.optimize(objective, n_trials=15, timeout=timeout, show_progress_bar=True, callbacks=[print_best_trial], n_jobs=15)
 
 best_hyperparameters = study.best_params
 print("Best hyperparameters: ", best_hyperparameters)
